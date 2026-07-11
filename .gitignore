@@ -1,0 +1,28 @@
+CLAUDE.md
+
+# Build output
+target/
+
+# Maven wrapper jar (downloaded on first use)
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.DS_Store
+
+# Secrets / local config
+.env
+.env.local
+application-local.yml
+
+# Logs
+*.log
+logs/
+
+# Terraform state (for M7)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/.terraform.lock.hcl
