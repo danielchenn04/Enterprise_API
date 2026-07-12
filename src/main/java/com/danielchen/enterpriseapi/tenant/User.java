@@ -1,35 +1,30 @@
-package com.danielchen.enterpriseapi.resource.project;
+package com.danielchen.enterpriseapi.tenant;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "projects")
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Project {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "org_id", nullable = false, updatable = false)
-    private UUID orgId;
+    @Column(nullable = false, unique = true)
+    private String email;
 
     @Column(nullable = false)
-    private String name;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    private String passwordHash;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
-
-    @Column(nullable = false)
-    private Instant updatedAt = Instant.now();
 }

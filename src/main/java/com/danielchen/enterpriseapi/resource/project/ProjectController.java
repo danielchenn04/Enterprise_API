@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class ProjectController {
     private final ProjectService projectService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProjectResponse>> create(
             @Valid @RequestBody CreateProjectRequest request) {
         ProjectResponse response = projectService.create(request);
@@ -41,6 +43,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ProjectResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateProjectRequest request) {
@@ -48,6 +51,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         projectService.delete(id);
         return ResponseEntity.noContent().build();
