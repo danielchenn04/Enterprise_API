@@ -22,6 +22,10 @@ public class Organization {
     @Column(nullable = false)
     private String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrgTier tier = OrgTier.FREE;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

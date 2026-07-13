@@ -1,4 +1,7 @@
 spring:
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/enterpriseapi}
     username: ${SPRING_DATASOURCE_USERNAME:app}
@@ -23,6 +26,16 @@ app:
     # Base64-encoded 256-bit secret — override with JWT_SECRET env var in production
     secret: ${JWT_SECRET:c29tZS1zdXBlci1zZWNyZXQta2V5LWZvci1kZXYtb25seS1jaGFuZ2UtaW4tcHJvZA==}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}  # 24h
+  rate-limit:
+    tiers:
+      free:
+        capacity: 100
+        refill-tokens: 100
+        refill-period-seconds: 60
+      enterprise:
+        capacity: 1000
+        refill-tokens: 1000
+        refill-period-seconds: 60
 
 server:
   port: 8080

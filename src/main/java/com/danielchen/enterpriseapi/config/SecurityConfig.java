@@ -1,9 +1,12 @@
 package com.danielchen.enterpriseapi.config;
 
 import com.danielchen.enterpriseapi.apikey.ApiKeyRepository;
+import com.danielchen.enterpriseapi.ratelimit.RateLimitFilter;
+import com.danielchen.enterpriseapi.ratelimit.RateLimitService;
 import com.danielchen.enterpriseapi.security.ApiKeyAuthFilter;
 import com.danielchen.enterpriseapi.security.JwtAuthFilter;
 import com.danielchen.enterpriseapi.security.JwtService;
+import com.danielchen.enterpriseapi.tenant.OrganizationRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +29,8 @@ public class SecurityConfig {
 
     private final JwtService jwtService;
     private final ApiKeyRepository apiKeyRepository;
+    private final RateLimitService rateLimitService;
+    private final OrganizationRepository organizationRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -39,6 +44,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new ApiKeyAuthFilter(apiKeyRepository), UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new RateLimitFilter(rateLimitService, organizationRepository),
+                        UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
