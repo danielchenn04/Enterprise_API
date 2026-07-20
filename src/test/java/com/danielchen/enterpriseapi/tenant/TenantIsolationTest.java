@@ -1,30 +1,17 @@
 package com.danielchen.enterpriseapi.tenant;
 
+import com.danielchen.enterpriseapi.AbstractIntegrationTest;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Gated on DOCKER_API_COMPAT=true — see CLAUDE.md for OrbStack workaround
-@EnabledIfEnvironmentVariable(named = "DOCKER_API_COMPAT", matches = "true")
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers
-class TenantIsolationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+// Gated on DOCKER_API_COMPAT=true — see AbstractIntegrationTest
+class TenantIsolationTest extends AbstractIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
@@ -43,7 +30,7 @@ class TenantIsolationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        String projectId = com.jayway.jsonpath.JsonPath.read(createResp, "$.data.id");
+        String projectId = JsonPath.read(createResp, "$.data.id");
 
         // --- Tenant B: sign up ---
         String tokenB = signupAndGetToken("Rival Corp", "bob@rival.com", "password2");
@@ -69,6 +56,6 @@ class TenantIsolationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        return com.jayway.jsonpath.JsonPath.read(body, "$.data.token");
+        return JsonPath.read(body, "$.data.token");
     }
 }

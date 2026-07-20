@@ -1,39 +1,41 @@
 package com.danielchen.enterpriseapi.resource.project;
 
+import com.danielchen.enterpriseapi.AbstractIntegrationTest;
+import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// OrbStack enforces Docker API >= 1.40, but Testcontainers 1.20.x shades docker-java and
-// hardcodes VERSION_1_32 in DockerClientProviderStrategy.getClientForConfig(). This test is
-// skipped locally and enabled in CI via the DOCKER_API_COMPAT env var (set in ci.yml).
-@EnabledIfEnvironmentVariable(named = "DOCKER_API_COMPAT", matches = "true")
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers
-class ProjectControllerTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ProjectControllerTest extends AbstractIntegrationTest {
 
     @Autowired
     MockMvc mockMvc;
 
+    private String adminToken;
+
+    @BeforeAll
+    void setUp() throws Exception {
+        String resp = mockMvc.perform(post("/api/v1/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"orgName":"Proj Org","email":"projtest@example.com","password":"Password1!"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        adminToken = JsonPath.read(resp, "$.data.token");
+    }
+
     @Test
     void createAndGetProject() throws Exception {
         mockMvc.perform(post("/api/v1/projects")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "Alpha", "description": "First project"}
@@ -42,14 +44,16 @@ class ProjectControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value("Alpha"));
 
-        mockMvc.perform(get("/api/v1/projects"))
+        mockMvc.perform(get("/api/v1/projects")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(1));
+                .andExpect(jsonPath("$.data.content[0].name").value("Alpha"));
     }
 
     @Test
     void returns404ForMissingProject() throws Exception {
-        mockMvc.perform(get("/api/v1/projects/00000000-0000-0000-0000-000000000000"))
+        mockMvc.perform(get("/api/v1/projects/00000000-0000-0000-0000-000000000000")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -57,6 +61,7 @@ class ProjectControllerTest {
     @Test
     void returnsValidationErrorForBlankName() throws Exception {
         mockMvc.perform(post("/api/v1/projects")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": ""}

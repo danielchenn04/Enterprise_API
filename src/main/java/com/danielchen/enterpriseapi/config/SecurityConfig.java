@@ -7,6 +7,7 @@ import com.danielchen.enterpriseapi.security.ApiKeyAuthFilter;
 import com.danielchen.enterpriseapi.security.JwtAuthFilter;
 import com.danielchen.enterpriseapi.security.JwtService;
 import com.danielchen.enterpriseapi.tenant.OrganizationRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +32,7 @@ public class SecurityConfig {
     private final ApiKeyRepository apiKeyRepository;
     private final RateLimitService rateLimitService;
     private final OrganizationRepository organizationRepository;
+    private final MeterRegistry meterRegistry;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -44,7 +46,7 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new ApiKeyAuthFilter(apiKeyRepository), UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(new RateLimitFilter(rateLimitService, organizationRepository),
+                .addFilterAfter(new RateLimitFilter(rateLimitService, organizationRepository, meterRegistry),
                         UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {

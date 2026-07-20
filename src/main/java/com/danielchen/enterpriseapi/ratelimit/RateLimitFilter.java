@@ -6,6 +6,7 @@ import com.danielchen.enterpriseapi.tenant.OrgTier;
 import com.danielchen.enterpriseapi.tenant.Organization;
 import com.danielchen.enterpriseapi.tenant.OrganizationRepository;
 import io.github.bucket4j.ConsumptionProbe;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,11 +21,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitService rateLimitService;
     private final OrganizationRepository organizationRepository;
+    private final MeterRegistry meterRegistry;
 
     public RateLimitFilter(RateLimitService rateLimitService,
-                           OrganizationRepository organizationRepository) {
+                           OrganizationRepository organizationRepository,
+                           MeterRegistry meterRegistry) {
         this.rateLimitService = rateLimitService;
         this.organizationRepository = organizationRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -44,10 +48,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         ConsumptionProbe probe = rateLimitService.tryConsume(user.orgId(), tier);
 
+        String orgTag = user.orgId().toString();
         if (probe.isConsumed()) {
+            meterRegistry.counter("tenant.requests", "orgId", orgTag).increment();
             response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
             chain.doFilter(request, response);
         } else {
+            meterRegistry.counter("rate.limit.exceeded", "orgId", orgTag).increment();
             long retryAfterSeconds = TimeUnit.NANOSECONDS.toSeconds(probe.getNanosToWaitForRefill());
             response.setStatus(429);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
