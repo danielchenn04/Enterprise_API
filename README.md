@@ -8,19 +8,19 @@ A production-grade multi-tenant REST API built with Java 21 and Spring Boot 3, d
 
 ```
                           ┌──────────────────────────────────────────────────┐
-                          │                    AWS VPC                        │
-  Internet                │  Public Subnets          Private Subnets          │
-  ─────────               │  ─────────────           ───────────────          │
-  Clients ──► WAF ──────► │  ALB (port 80/443)                                │
-                          │       │                                            │
+                          │                    AWS VPC                       │
+  Internet                │  Public Subnets          Private Subnets         │
+  ─────────               │  ─────────────           ───────────────         │
+  Clients ──► WAF ──────► │  ALB (port 80/443)                               │
+                          │       │                                          │
                           │       └──────────────► ECS Fargate Tasks (×2–10) │
-                          │                              │         │           │
-                          │                         RDS Proxy  Redis (HA)     │
-                          │                              │                     │
-                          │                         RDS Postgres 16            │
-                          │                          (Multi-AZ)                │
+                          │                              │         │         │
+                          │                         RDS Proxy  Redis (HA)    │
+                          │                              │                   │
+                          │                         RDS Postgres 16          │
+                          │                          (Multi-AZ)              │
                           └──────────────────────────────────────────────────┘
-                                                  ▲
+                                                   ▲
                           GitHub Actions ──────────┘
                           (build → test → push ECR → rolling ECS deploy)
 ```
