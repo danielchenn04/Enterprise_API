@@ -2,17 +2,17 @@ package com.danielchen.enterpriseapi.resource.project;
 
 import com.danielchen.enterpriseapi.AbstractIntegrationTest;
 import com.jayway.jsonpath.JsonPath;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProjectControllerTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -20,13 +20,14 @@ class ProjectControllerTest extends AbstractIntegrationTest {
 
     private String adminToken;
 
-    @BeforeAll
+    @BeforeEach
     void setUp() throws Exception {
+        String email = "projtest-" + UUID.randomUUID() + "@example.com";
         String resp = mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"orgName":"Proj Org","email":"projtest@example.com","password":"Password1!"}
-                                """))
+                                {"orgName":"Proj Org","email":"%s","password":"Password1!"}
+                                """.formatted(email)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         adminToken = JsonPath.read(resp, "$.data.token");
