@@ -47,16 +47,29 @@ jobs:
           name: test-reports
           path: target/surefire-reports/
 
+  # ── Check whether AWS secrets are configured ──────────────────────────────
+  check-aws:
+    name: Check AWS secrets
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "configured=true"  >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+          fi
+
   # ── Build & Push Docker Image ─────────────────────────────────────────────
   build-and-push:
     name: Build & Push to ECR
-    needs: test
-    # Only runs on main-branch pushes AND when AWS secrets are configured.
-    # Skips gracefully if Terraform hasn't been applied yet.
-    if: >
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      secrets.AWS_ACCESS_KEY_ID != ''
+    needs: [test, check-aws]
+    if: needs.check-aws.outputs.configured == 'true'
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.build-push.outputs.image }}
@@ -92,8 +105,8 @@ jobs:
   # ── Rolling Deploy to ECS ─────────────────────────────────────────────────
   deploy:
     name: Deploy to ECS
-    needs: build-and-push
-    if: secrets.AWS_ACCESS_KEY_ID != ''
+    needs: [build-and-push, check-aws]
+    if: needs.check-aws.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment: production
 
