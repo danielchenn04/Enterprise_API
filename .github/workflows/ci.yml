@@ -51,7 +51,12 @@ jobs:
   build-and-push:
     name: Build & Push to ECR
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Only runs on main-branch pushes AND when AWS secrets are configured.
+    # Skips gracefully if Terraform hasn't been applied yet.
+    if: >
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      secrets.AWS_ACCESS_KEY_ID != ''
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.build-push.outputs.image }}
@@ -88,6 +93,7 @@ jobs:
   deploy:
     name: Deploy to ECS
     needs: build-and-push
+    if: secrets.AWS_ACCESS_KEY_ID != ''
     runs-on: ubuntu-latest
     environment: production
 
