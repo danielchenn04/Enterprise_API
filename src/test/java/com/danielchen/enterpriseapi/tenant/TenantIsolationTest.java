@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -19,7 +21,8 @@ class TenantIsolationTest extends AbstractIntegrationTest {
     @Test
     void tenantACannnotReadTenantBProjects() throws Exception {
         // --- Tenant A: sign up, create a project ---
-        String tokenA = signupAndGetToken("Acme", "alice@acme.com", "password1");
+        String id = UUID.randomUUID().toString().substring(0, 8);
+        String tokenA = signupAndGetToken("Acme-" + id, "alice-" + id + "@acme.com", "password1");
 
         String createResp = mockMvc.perform(post("/api/v1/projects")
                         .header("Authorization", "Bearer " + tokenA)
@@ -33,7 +36,7 @@ class TenantIsolationTest extends AbstractIntegrationTest {
         String projectId = JsonPath.read(createResp, "$.data.id");
 
         // --- Tenant B: sign up ---
-        String tokenB = signupAndGetToken("Rival Corp", "bob@rival.com", "password2");
+        String tokenB = signupAndGetToken("Rival-" + id, "bob-" + id + "@rival.com", "password2");
 
         // Tenant B tries to list — should see 0 projects (none from their org)
         mockMvc.perform(get("/api/v1/projects")

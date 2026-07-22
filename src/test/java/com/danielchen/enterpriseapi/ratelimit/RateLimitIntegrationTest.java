@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -18,20 +20,27 @@ class RateLimitIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void burstingOneTenantDoesNotAffectAnother() throws Exception {
-        String tokenA = signupAndGetToken("RateOrg A", "rla@example.com", "Password1!");
-        String tokenB = signupAndGetToken("RateOrg B", "rlb@example.com", "Password1!");
+        String id = UUID.randomUUID().toString().substring(0, 8);
+        String tokenA = signupAndGetToken("RateOrg-A-" + id, "rla-" + id + "@example.com", "Password1!");
+        String tokenB = signupAndGetToken("RateOrg-B-" + id, "rlb-" + id + "@example.com", "Password1!");
 
-        // Exhaust Tenant A's 100-req/min FREE bucket
+        // Exhaust Tenant A's 100-req/min FREE bucket.
+        // Burst 120 requests — more than enough to drain the 100-token bucket.
+        // We don't assert an exact count because greedy (time-based) refill
+        // continuously trickles tokens back during the ~1s burst, so the real
+        // cutoff is 100 + a few (typically ≤105 on fast hardware).
         int allowed = 0;
-        for (int i = 0; i < 101; i++) {
+        for (int i = 0; i < 120; i++) {
             int status = mockMvc.perform(get("/api/v1/projects")
                             .header("Authorization", "Bearer " + tokenA))
                     .andReturn().getResponse().getStatus();
             if (status == 200) allowed++;
         }
-        assertThat(allowed).isEqualTo(100);
+        // At least 100 must have been allowed (the configured capacity).
+        // At most 110 — a 10-token margin covers any refill during the burst.
+        assertThat(allowed).isGreaterThanOrEqualTo(100).isLessThanOrEqualTo(110);
 
-        // Next request for Tenant A is rate-limited
+        // Bucket is now exhausted — next request for Tenant A is rate-limited
         mockMvc.perform(get("/api/v1/projects")
                         .header("Authorization", "Bearer " + tokenA))
                 .andExpect(status().isTooManyRequests())
